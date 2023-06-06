@@ -8,13 +8,62 @@ camera.position.z = 15;
 camera.position.y = 0;
 camera.lookAt(0, 0, 0); 
 
-const axesHelper = new THREE.AxesHelper(5);
-scene.add(axesHelper);
+
+document.addEventListener('keydown', onKeyPress);
+
+let lightOn = true;
+
+function onKeyPress(event) {
+  if (event.key === 'c') {
+    scene.rotation.x += Math.PI;
+
+    
+    camera.position.z *= -1;
+    camera.lookAt(0, 0, 0);
+  }
+   else if (event.key === 'l') {
+  // "L" key
+  toggleLight();
+}
+}
+
+function toggleLight() {
+  lightOn = !lightOn; // Toggle the light status
+
+  // Set the light's visibility based on the lightOn flag
+  ambientLight.visible = lightOn;
+
+  // Update the scene to reflect the changes
+  renderer.render(scene, camera);
+}
+
+
+
+
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(0, 0, 1); // Set the position of the light
+scene.add(directionalLight);
+
+
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 1024; // Set shadow map width
+directionalLight.shadow.mapSize.height = 1024; // Set shadow map height
+directionalLight.shadow.camera.near = 0.5; // Set near shadow camera distance
+directionalLight.shadow.camera.far = 500; // Set far shadow camera distance
+
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setClearColor(0xffffff, 0);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+renderer.shadowMap.enabled = true; // Enable shadow mapping in the renderer
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Choose the type of shadow map
 
 //Importing gltf model
 const gltfLoader = new GLTFLoader();
@@ -40,21 +89,25 @@ gltfLoader.load(
 );
 
 
+
+
+
 // Materials
 const whiteMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const blackMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-const pawnMaterialRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const pawnMaterialBlue = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const towerMaterialRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const towerMaterialBlue = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const bishopMaterialRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const bishopMaterialBlue = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const knightMaterialRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const knightMaterialBlue = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const queenMaterialRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const queenMaterialBlue = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-const kingMaterialRed = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-const kingMaterialBlue = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+const pawnMaterialRed = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const pawnMaterialBlue = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+const towerMaterialRed = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const towerMaterialBlue = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+const bishopMaterialRed = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const bishopMaterialBlue = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+const knightMaterialRed = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const knightMaterialBlue = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+const queenMaterialRed = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const queenMaterialBlue = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+const kingMaterialRed = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+const kingMaterialBlue = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+const greenColor = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 
 // Geometries
 const squareGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -109,6 +162,8 @@ function createPawns() {
 
     pawnSphereRed.name = `Pawn_Red_${fileName}2`; // Assign a name to the red pawn using algebraic notation
     pawnSphereBlue.name = `Pawn_Blue_${fileName}7`; // Assign a name to the blue pawn using algebraic notation
+    pawnSphereRed.castShadow = true;
+    pawnSphereBlue.castShadow = true;
 
     scene.add(pawnSphereRed);
     scene.add(pawnSphereBlue);
@@ -280,36 +335,130 @@ function createQueenAndKing() {
 
 
 const occupiedSquares = {}; // Object to track occupied squares
+function getSquareNameByPosition(position) {
+  // Iterate through the squares and check if the position matches
+  for (const squareName in occupiedSquares) {
+    const square = scene.getObjectByName(squareName);
+    if (square.position.equals(position)) {
+      return squareName;
+    }
+  }
+  return null; // Return null if no square matches the position
+}
+
+const squareColors = {}; // Object to store the original colors of squares
+
+function changeSquareColor(squareName, colorMaterial) {
+  const square = findSquareByName(squareName);
+  
+  if (square) {
+    // Store the original color if it hasn't been stored before
+    if (!squareColors[squareName]) {
+      squareColors[squareName] = square.material;
+    }
+    
+    square.material = colorMaterial;
+  } else {
+    console.log(`Square ${squareName} not found.`);
+  }
+}
+
+function resetSquareColor(squareName) {
+  const square = findSquareByName(squareName);
+  
+  if (square) {
+    // Retrieve the original color from the stored value and reset it
+    const originalColor = squareColors[squareName];
+    square.material = originalColor;
+  } else {
+    console.log(`Square ${squareName} not found.`);
+  }
+}
+
+let tween = null;
+
+let isAnimating = false; // Flag to track animation status
 
 function updatePiecePosition(pieceName, squareName) {
+  if (isAnimating) {
+    // If animation is in progress, ignore the move
+    return;
+  }
+
+  changeSquareColor(squareName, greenColor);
+
   const piece = scene.getObjectByName(pieceName);
   const square = scene.getObjectByName(squareName);
-  const redMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-  const redWhite = new THREE.MeshBasicMaterial({ color: 0xfffff });
-  changeSquareColor(squareName, redMaterial);
-
-  console.log(square);
 
   if (piece && square) {
-    const capturedPieceName = occupiedSquares[squareName]; // Check if there's a captured piece at the destination square
+    const capturedPieceName = occupiedSquares[squareName];
     if (capturedPieceName) {
       const capturedPiece = scene.getObjectByName(capturedPieceName);
       if (capturedPiece) {
-        scene.remove(capturedPiece); // Remove the captured piece from the scene
+        scene.remove(capturedPiece);
+        console.log(`Captured piece ${capturedPieceName} removed from scene.`);
       }
-      delete occupiedSquares[squareName]; // Clear the occupied square
-  
+      delete occupiedSquares[squareName];
+      console.log(`Square ${squareName} cleared from occupiedSquares.`);
     }
 
-    // Update the position of the piece to match the position of the square
-    piece.position.copy(square.position);
-    piece.position.z = 1;
+    const initialPosition = piece.position.clone();
+    const targetPosition = square.position.clone();
+    targetPosition.z = 1;
 
-    occupiedSquares[squareName] = pieceName; // Update the occupied square with the new piece
+    if (tween && tween.isPlaying()) {
+      tween.stop();
+    }
+
+    isAnimating = true; // Set animation flag to true
+
+    tween = new TWEEN.Tween({ x: initialPosition.x, y: initialPosition.y, z: initialPosition.z })
+      .to({ x: targetPosition.x, y: targetPosition.y, z: targetPosition.z }, 500)
+      .easing(TWEEN.Easing.Quadratic.Out)
+      .onUpdate(({ x, y, z }) => {
+        piece.position.set(x, y, z);
+        const currentPosition = piece.position.clone();
+        const currentSquare = getSquareNameByPosition(currentPosition);
+        if (currentSquare !== squareName) {
+          if (occupiedSquares[currentSquare] === pieceName) {
+            delete occupiedSquares[currentSquare];
+            console.log(`Square ${currentSquare} cleared from occupiedSquares.`);
+          }
+          occupiedSquares[squareName] = pieceName;
+          console.log(`Square ${squareName} marked as occupied by ${pieceName}.`);
+        }
+      })
+      .onComplete(() => {
+        isAnimating = false;
+        resetSquareColor(squareName); // Reset animation flag to false
+      })
+      .start();
+
+    animate();
   } else {
     console.log("Piece or square not found.");
   }
+
+  function animate() {
+    if (tween && tween.isPlaying()) {
+      requestAnimationFrame(animate);
+      TWEEN.update();
+    }
+  }
 }
+
+function printOccupiedSquares() {
+  console.log("Occupied Squares:");
+  for (const square in occupiedSquares) {
+    if (occupiedSquares.hasOwnProperty(square)) {
+      const piece = occupiedSquares[square];
+      console.log(`${square}: ${piece}`);
+    }
+  }
+}
+      
+   
+
 
 
 
@@ -380,15 +529,7 @@ function findSquareByName(squareName) {
   return null;
 }
 
-function changeSquareColor(squareName, colorMaterial) {
-  const square = findSquareByName(squareName);
-  
-  if (square) {
-    square.material = colorMaterial;
-  } else {
-    console.log(`Square ${squareName} not found.`);
-  }
-}
+
 
 
 function getSquareName(pieceName) {
@@ -591,8 +732,3 @@ const chessGame = init();
 // Example usage of the getSquareName function
 const squareName = chessGame.getSquareName("Queen_Red");
 console.log(squareName);
-
-
-
-
-

@@ -1,0 +1,11 @@
+Model Information:
+* title:	004 Chess Rook
+* source:	https://sketchfab.com/3d-models/004-chess-rook-53ca0316e8794e5a83f3a20532a3e13a
+* author:	eduterrataca (https://sketchfab.com/eduterrataca)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "004 Chess Rook" (https://sketchfab.com/3d-models/004-chess-rook-53ca0316e8794e5a83f3a20532a3e13a) by eduterrataca (https://sketchfab.com/eduterrataca) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
