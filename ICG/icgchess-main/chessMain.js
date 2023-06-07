@@ -1,12 +1,16 @@
 import * as THREE from './js/three.module.js';
 import { OrbitControls } from "./js/OrbitControls.js";
 import { GLTFLoader } from "./js/GLTFLoader.js";
-  
+
+
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 15;
 camera.position.y = 0;
 camera.lookAt(0, 0, 0); 
+
+
 
 
 document.addEventListener('keydown', onKeyPress);
@@ -332,19 +336,51 @@ function createQueenAndKing() {
   return [queenMeshRed, queenMeshBlue, kingMeshRed, kingMeshBlue];
 }
 
-
-
-const occupiedSquares = {}; // Object to track occupied squares
 function getSquareNameByPosition(position) {
-  // Iterate through the squares and check if the position matches
-  for (const squareName in occupiedSquares) {
-    const square = scene.getObjectByName(squareName);
-    if (square.position.equals(position)) {
-      return squareName;
-    }
-  }
-  return null; // Return null if no square matches the position
+  const x = Math.round(position.x + 3.5);
+  const y = Math.round(position.y + 3.5);
+  const fileNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const rankNames = ['1', '2', '3', '4', '5', '6', '7', '8'];
+  const squareName = fileNames[x] + rankNames[y];
+  return squareName;
 }
+
+const occupiedSquares = {
+  a1: "Tower_Red_a1",
+  b1: "Knight_Red_b1",
+  c1: "Bishop_Red_c1",
+  d1: "Queen_Red_d1",
+  e1: "King_Red_e1",
+  f1: "Bishop_Red_f2",
+  g1: "Knight_Red_g2",
+  h1: "Tower_Red_h2",
+  a2: "Pawn_Red_a2",
+  b2: "Pawn_Red_b2",
+  c2: "Pawn_Red_c2",
+  d2: "Pawn_Red_d2",
+  e2: "Pawn_Red_e2",
+  f2: "Pawn_Red_f2",
+  g2: "Pawn_Red_g2",
+  h2: "Pawn_Red_h2",
+  a7: "Pawn_Blue_a7",
+  b7: "Pawn_Blue_b7",
+  c7: "Pawn_Blue_c7",
+  d7: "Pawn_Blue_d7",
+  e7: "Pawn_Blue_e7",
+  f7: "Pawn_Blue_f7",
+  g7: "Pawn_Blue_g7",
+  h7: "Pawn_Blue_h7",
+  a8: "Tower_Blue_a1",
+  b8: "Knight_Blue_b1",
+  c8: "Bishop_Blue_c1",
+  d8: "Queen_Blue_d8",
+  e8: "King_Blue_e8",
+  f8: "Bishop_Blue_f2",
+  g8: "Knight_Blue_g2",
+  h8: "Tower_Blue_h2"
+};
+
+
 
 const squareColors = {}; // Object to store the original colors of squares
 
@@ -379,6 +415,9 @@ let tween = null;
 
 let isAnimating = false; // Flag to track animation status
 
+
+
+// Updated updatePiecePosition function
 function updatePiecePosition(pieceName, squareName) {
   if (isAnimating) {
     // If animation is in progress, ignore the move
@@ -391,26 +430,40 @@ function updatePiecePosition(pieceName, squareName) {
   const square = scene.getObjectByName(squareName);
 
   if (piece && square) {
-    const capturedPieceName = occupiedSquares[squareName];
-    if (capturedPieceName) {
-      const capturedPiece = scene.getObjectByName(capturedPieceName);
-      if (capturedPiece) {
-        scene.remove(capturedPiece);
-        console.log(`Captured piece ${capturedPieceName} removed from scene.`);
-      }
-      delete occupiedSquares[squareName];
-      console.log(`Square ${squareName} cleared from occupiedSquares.`);
-    }
-
     const initialPosition = piece.position.clone();
     const targetPosition = square.position.clone();
     targetPosition.z = 1;
+
+    const initialSquare = getSquareNameByPosition(initialPosition);
+    const capturedPieceName = occupiedSquares[squareName];
+
+    // Check if the target square is already occupied
+    if (capturedPieceName) {
+      // Check if the captured piece is an opponent's piece
+      const isOpponentPiece = (pieceName.includes("Red") && capturedPieceName.includes("Blue")) ||
+        (pieceName.includes("Blue") && capturedPieceName.includes("Red"));
+
+      if (isOpponentPiece) {
+        const capturedPiece = scene.getObjectByName(capturedPieceName);
+        if (capturedPiece) {
+          scene.remove(capturedPiece);
+          console.log(`Captured piece ${capturedPieceName} removed from scene.`);
+        }
+        delete occupiedSquares[squareName];
+        console.log(`Square ${squareName} cleared from occupiedSquares.`);
+      } else {
+        // Target square is occupied by a friendly piece, log a message
+        console.log("Target square is occupied by a friendly piece.");
+      }
+    }
+
+    delete occupiedSquares[initialSquare];
 
     if (tween && tween.isPlaying()) {
       tween.stop();
     }
 
-    isAnimating = true; // Set animation flag to true
+    isAnimating = true;
 
     tween = new TWEEN.Tween({ x: initialPosition.x, y: initialPosition.y, z: initialPosition.z })
       .to({ x: targetPosition.x, y: targetPosition.y, z: targetPosition.z }, 500)
@@ -420,17 +473,15 @@ function updatePiecePosition(pieceName, squareName) {
         const currentPosition = piece.position.clone();
         const currentSquare = getSquareNameByPosition(currentPosition);
         if (currentSquare !== squareName) {
-          if (occupiedSquares[currentSquare] === pieceName) {
-            delete occupiedSquares[currentSquare];
-            console.log(`Square ${currentSquare} cleared from occupiedSquares.`);
-          }
-          occupiedSquares[squareName] = pieceName;
-          console.log(`Square ${squareName} marked as occupied by ${pieceName}.`);
+          occupiedSquares[currentSquare.name] = pieceName; // Convert currentSquare to a string
+          console.log(`Square ${currentSquare.name} marked as occupied by ${pieceName}.`); // Adjust the log message accordingly
         }
       })
       .onComplete(() => {
         isAnimating = false;
-        resetSquareColor(squareName); // Reset animation flag to false
+        occupiedSquares[squareName] = pieceName;
+        console.log(`Square ${squareName} marked as occupied by ${pieceName}.`);
+        resetSquareColor(squareName);
       })
       .start();
 
@@ -438,29 +489,10 @@ function updatePiecePosition(pieceName, squareName) {
   } else {
     console.log("Piece or square not found.");
   }
-
-  function animate() {
-    if (tween && tween.isPlaying()) {
-      requestAnimationFrame(animate);
-      TWEEN.update();
-    }
-  }
 }
 
-function printOccupiedSquares() {
-  console.log("Occupied Squares:");
-  for (const square in occupiedSquares) {
-    if (occupiedSquares.hasOwnProperty(square)) {
-      const piece = occupiedSquares[square];
-      console.log(`${square}: ${piece}`);
-    }
-  }
-}
-      
-   
 
-
-
+  
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -609,42 +641,28 @@ const moves = [
   { piece: "Queen_Red_d1", destination: "e3" },
   { piece: "Queen_Blue_d8", destination: "f6" },
   { piece: "Pawn_Red_c2", destination: "d5" },
-  { piece: "Tower_Blue_a1", destination: "d5" },
-  { piece: "Queen_Red_d1", destination: "c5" },
-  { piece: "Pawn_Blue_e7", destination: "d4" },
+  { piece: "Tower_Blue_h2", destination: "d5" },
+  { piece: "Tower_Red_h2", destination: "d5" },
+  { piece: "Pawn_Blue_e7", destination: "d5" },
   { piece: "Pawn_Red_b2", destination: "b3" },
   { piece: "King_Blue_e8", destination: "h8" },
   { piece: "Queen_Red_d1", destination: "b6" },
-  { piece: "Tower_Blue_f6", destination: "g8" },
-  { piece: "Queen_Blue_d8", destination: "d8" },
-  { piece: "Rook_Red_d8", destination: "g8" },
-  { piece: "Knight_Blue_f3", destination: "h2" },
-  { piece: "Rook_Red_g8", destination: "g7" },
-  { piece: "Knight_Blue_h2", destination: "f3" },
-  { piece: "King_Red_e1", destination: "g1" },
-  { piece: "Rook_Blue_g7", destination: "g1" },
-  { piece: "Rook_Red_g1", destination: "g7" },
-  { piece: "Knight_Blue_f3", destination: "e4" },
-  { piece: "Rook_Red_g7", destination: "g1" },
-  { piece: "Rook_Blue_g1", destination: "g7" },
-  { piece: "Rook_Red_g1", destination: "g7" },
-  { piece: "Knight_Blue_e4", destination: "g3" },
-  { piece: "Rook_Red_g7", destination: "g1" },
-  { piece: "Rook_Blue_g1", destination: "g7" },
-  { piece: "Rook_Red_g7", destination: "g1" },
-  { piece: "Rook_Blue_g7", destination: "g1" },
-  { piece: "Rook_Red_g1", destination: "g7" },
-  { piece: "Rook_Blue_g1", destination: "g7" },
-  { piece: "Rook_Red_g7", destination: "g1" },
-  { piece: "Rook_Blue_g7", destination: "g1" },
-  { piece: "Rook_Red_g1", destination: "g7" },
-  { piece: "Rook_Blue_g1", destination: "g7" },
-  { piece: "Rook_Red_g7", destination: "g1" },
-  { piece: "Rook_Blue_g1", destination: "g7" },
-  { piece: "Rook_Red_g7", destination: "g1" },
-  { piece: "Rook_Blue_g1", destination: "g7" },
-  { piece: "Rook_Red_g1", destination: "g7" },
-  { piece: "Rook_Blue_g7", destination: "g1" }
+  { piece: "Tower_Blue_a1", destination: "g8" },
+  { piece: "Queen_Red_d1", destination: "c5" },
+  { piece: "Pawn_Blue_e7", destination: "d4" },
+  { piece: "Knight_Red_b1", destination: "d6" },
+  { piece: "Pawn_Blue_g7", destination: "f4" },
+  { piece: "Knight_Red_b1", destination: "b7" },
+  { piece: "Knight_Blue_b1", destination: "e5" },
+  { piece: "Queen_Red_d1", destination: "d5" },
+  { piece: "Pawn_Blue_g7", destination: "f3" },
+  { piece: "Pawn_Red_g2", destination: "g3" },
+  { piece: "Knight_Blue_b1", destination: "d3" },
+  { piece: "Tower_Red_a1", destination: "c7" },
+  { piece: "Tower_Blue_a1", destination: "e8" },
+  { piece: "Knight_Red_b1", destination: "d6" },
+  { piece: "Tower_Blue_a1", destination: "e1" },
+  { piece: "King_Red_e1", destination: "h2" },
 ];
 
 
@@ -658,17 +676,10 @@ document.onkeydown = function(e) {
       updatePiecePosition(move.piece, move.destination);
       currentMoveIndex++;
     }
-  } else if (e.keyCode === 37) {
-    // Left arrow key
-    if (currentMoveIndex > 0) {
-      currentMoveIndex--;
-      const move = moves[currentMoveIndex];
-      // Undo the move by swapping the destination and original positions
-      const originalPosition = move.destination;
-      updatePiecePosition(move.piece, originalPosition);
-    }
   }
 };
+
+
 
 
 function init() {
